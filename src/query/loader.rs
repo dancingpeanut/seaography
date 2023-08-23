@@ -134,7 +134,7 @@ where
         keys: &[KeyComplex<T>],
     ) -> Result<HashMap<KeyComplex<T>, Self::Value>, Self::Error> {
         let items: HashMap<HashAbleGroupKey<T>, Vec<Vec<sea_orm::Value>>> = keys
-            .into_iter()
+            .iter()
             .cloned()
             .map(|item: KeyComplex<T>| {
                 (
@@ -177,10 +177,10 @@ where
                         None => Condition::all(),
                     };
                     let tuple = sea_orm::sea_query::Expr::tuple(key.columns.iter().map(
-                        |column: &T::Column| sea_orm::sea_query::Expr::col(column.clone()).into(),
+                        |column: &T::Column| sea_orm::sea_query::Expr::col(*column).into(),
                     ));
                     let condition = condition
-                        .add(tuple.in_tuples(values.into_iter().map(|v| ValueTuple::Many(v))));
+                        .add(tuple.in_tuples(values.into_iter().map(ValueTuple::Many)));
                     let stmt = stmt.filter(condition);
 
                     let stmt = apply_order(stmt, key.order_by);
@@ -194,7 +194,7 @@ where
 
         for (key, promise) in promises.into_iter() {
             let key = key as HashAbleGroupKey<T>;
-            let result: Vec<T::Model> = promise.await.map_err(|e| Arc::new(e))?;
+            let result: Vec<T::Model> = promise.await.map_err(Arc::new)?;
             for item in result.into_iter() {
                 let key = &KeyComplex::<T> {
                     key: key
@@ -254,7 +254,7 @@ where
         keys: &[KeyComplex<T>],
     ) -> Result<HashMap<KeyComplex<T>, Self::Value>, Self::Error> {
         let items: HashMap<HashAbleGroupKey<T>, Vec<Vec<sea_orm::Value>>> = keys
-            .into_iter()
+            .iter()
             .cloned()
             .map(|item: KeyComplex<T>| {
                 (
@@ -297,10 +297,10 @@ where
                         None => Condition::all(),
                     };
                     let tuple = sea_orm::sea_query::Expr::tuple(key.columns.iter().map(
-                        |column: &T::Column| sea_orm::sea_query::Expr::col(column.clone()).into(),
+                        |column: &T::Column| sea_orm::sea_query::Expr::col(*column).into(),
                     ));
                     let condition = condition
-                        .add(tuple.in_tuples(values.into_iter().map(|v| ValueTuple::Many(v))));
+                        .add(tuple.in_tuples(values.into_iter().map(ValueTuple::Many)));
                     let stmt = stmt.filter(condition);
 
                     let stmt = apply_order(stmt, key.order_by);
@@ -314,7 +314,7 @@ where
 
         for (key, promise) in promises.into_iter() {
             let key = key as HashAbleGroupKey<T>;
-            let result: Vec<T::Model> = promise.await.map_err(|e| Arc::new(e))?;
+            let result: Vec<T::Model> = promise.await.map_err(Arc::new)?;
             for item in result.into_iter() {
                 let key = &KeyComplex::<T> {
                     key: key

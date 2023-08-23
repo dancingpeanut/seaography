@@ -66,7 +66,7 @@ impl PaginationInputBuilder {
 
     /// used to parse query input to pagination information structure
     pub fn parse_object(&self, value: Option<ValueAccessor<'_>>) -> PaginationInput {
-        if let None = value {
+        if value.is_none() {
             return PaginationInput {
                 cursor: None,
                 offset: None,
