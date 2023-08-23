@@ -1,18 +1,25 @@
-use async_graphql::dynamic::{Enum, Field, InputObject, Object, Schema, SchemaBuilder};
+use async_graphql::{
+    dataloader::DataLoader,
+    dynamic::{Enum, Field, InputObject, Object, Schema, SchemaBuilder},
+};
 use sea_orm::{ActiveEnum, EntityTrait};
 use std::collections::BTreeMap;
 
 use crate::{
     ActiveEnumBuilder, ActiveEnumFilterInputBuilder, BuilderContext, ConnectionObjectBuilder,
     CursorInputBuilder, EdgeObjectBuilder, EntityObjectBuilder, EntityQueryFieldBuilder,
-    FilterInputBuilder, OffsetInputBuilder, OrderByEnumBuilder, OrderInputBuilder,
-    PageInfoObjectBuilder, PageInputBuilder, PaginationInfoObjectBuilder, PaginationInputBuilder,
+    FilterInputBuilder, OffsetInputBuilder, OneToManyLoader, OneToOneLoader, OrderByEnumBuilder,
+    OrderInputBuilder, PageInfoObjectBuilder, PageInputBuilder, PaginationInfoObjectBuilder,
+    PaginationInputBuilder,
 };
 
 /// The Builder is used to create the Schema for GraphQL
 ///
 /// You can populate it with the entities, enumerations of your choice
 pub struct Builder {
+    pub query: Object,
+    pub schema: SchemaBuilder,
+
     pub entities: Vec<Object>,
     pub edges: Vec<Object>,
     pub connections: Vec<Object>,
@@ -21,13 +28,21 @@ pub struct Builder {
     pub enumerations: Vec<Enum>,
     pub queries: Vec<Field>,
     pub relations: BTreeMap<String, Vec<Field>>,
+
+    pub connection: sea_orm::DatabaseConnection,
     pub context: &'static BuilderContext,
 }
 
 impl Builder {
     /// Used to create a new Builder from the given configuration context
-    pub fn new(context: &'static BuilderContext) -> Self {
+    pub fn new(context: &'static BuilderContext, connection: sea_orm::DatabaseConnection) -> Self {
+        let query = Object::new("Query");
+        let schema = Schema::build(query.type_name(), None, None);
+
         Self {
+            query,
+            schema,
+
             entities: Vec::new(),
             edges: Vec::new(),
             connections: Vec::new(),
@@ -36,6 +51,8 @@ impl Builder {
             enumerations: Vec::new(),
             queries: Vec::new(),
             relations: BTreeMap::new(),
+
+            connection,
             context,
         }
     }
@@ -96,6 +113,38 @@ impl Builder {
         self.queries.extend(vec![query]);
     }
 
+    pub fn register_entity_dataloader_one_to_one<T, R, S>(mut self, _entity: T, spawner: S) -> Self
+    where
+        T: EntityTrait,
+        <T as EntityTrait>::Model: Sync,
+        S: Fn(async_graphql::futures_util::future::BoxFuture<'static, ()>) -> R
+            + Send
+            + Sync
+            + 'static,
+    {
+        self.schema = self.schema.data(DataLoader::new(
+            OneToOneLoader::<T>::new(self.connection.clone()),
+            spawner,
+        ));
+        self
+    }
+
+    pub fn register_entity_dataloader_one_to_many<T, R, S>(mut self, _entity: T, spawner: S) -> Self
+    where
+        T: EntityTrait,
+        <T as EntityTrait>::Model: Sync,
+        S: Fn(async_graphql::futures_util::future::BoxFuture<'static, ()>) -> R
+            + Send
+            + Sync
+            + 'static,
+    {
+        self.schema = self.schema.data(DataLoader::new(
+            OneToManyLoader::<T>::new(self.connection.clone()),
+            spawner,
+        ));
+        self
+    }
+
     /// used to register a new enumeration to the builder context
     pub fn register_enumeration<A>(&mut self)
     where
@@ -117,14 +166,13 @@ impl Builder {
 
     /// used to consume the builder context and generate a ready to be completed GraphQL schema
     pub fn schema_builder(self) -> SchemaBuilder {
-        let query = Object::new("Query");
+        let query = self.query;
+        let schema = self.schema;
 
         let query = self
             .queries
             .into_iter()
             .fold(query, |query, field| query.field(field));
-
-        let schema = Schema::build(query.type_name(), None, None);
 
         let mut relations = self.relations;
 
@@ -251,6 +299,10 @@ macro_rules! register_entity {
                 .map(|rel| seaography::RelationBuilder::get_relation(&rel, $builder.context))
                 .collect(),
         );
+        $builder =
+            $builder.register_entity_dataloader_one_to_one($module_path::Entity, tokio::spawn);
+        $builder =
+            $builder.register_entity_dataloader_one_to_many($module_path::Entity, tokio::spawn);
     };
 }
 

@@ -84,8 +84,8 @@ pub fn generate_query_root<P: AsRef<Path>>(entities_path: &P) -> TokenStream {
     });
 
     quote! {
-        use crate::{entities::*, OrmDataloader};
-        use async_graphql::{dataloader::DataLoader, dynamic::*};
+        use crate::entities::*;
+        use async_graphql::dynamic::*;
         use sea_orm::DatabaseConnection;
         use seaography::{Builder, BuilderContext};
 
@@ -95,7 +95,6 @@ pub fn generate_query_root<P: AsRef<Path>>(entities_path: &P) -> TokenStream {
 
         pub fn schema(
             database: DatabaseConnection,
-            orm_dataloader: DataLoader<OrmDataloader>,
             depth: Option<usize>,
             complexity: Option<usize>,
         ) -> Result<Schema, SchemaError> {
@@ -124,7 +123,7 @@ pub fn generate_query_root<P: AsRef<Path>>(entities_path: &P) -> TokenStream {
                 schema
             };
 
-            schema.data(database).data(orm_dataloader).finish()
+            schema.data(database).finish()
         }
     }
 }
@@ -175,15 +174,8 @@ pub fn write_cargo_toml<P: AsRef<std::path::Path>>(
 ///
 pub fn write_lib<P: AsRef<std::path::Path>>(path: &P) -> std::io::Result<()> {
     let tokens = quote! {
-        use sea_orm::prelude::*;
-
         pub mod entities;
         pub mod query_root;
-
-        pub struct OrmDataloader {
-            pub db: DatabaseConnection,
-        }
-
     };
 
     let file_name = path.as_ref().join("lib.rs");
