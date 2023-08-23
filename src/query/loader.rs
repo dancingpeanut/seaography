@@ -176,11 +176,12 @@ where
                         Some(condition) => Condition::all().add(condition),
                         None => Condition::all(),
                     };
-                    let tuple = sea_orm::sea_query::Expr::tuple(key.columns.iter().map(
-                        |column: &T::Column| sea_orm::sea_query::Expr::col(*column).into(),
-                    ));
-                    let condition = condition
-                        .add(tuple.in_tuples(values.into_iter().map(ValueTuple::Many)));
+                    let tuple =
+                        sea_orm::sea_query::Expr::tuple(key.columns.iter().map(
+                            |column: &T::Column| sea_orm::sea_query::Expr::col(*column).into(),
+                        ));
+                    let condition =
+                        condition.add(tuple.in_tuples(values.into_iter().map(ValueTuple::Many)));
                     let stmt = stmt.filter(condition);
 
                     let stmt = apply_order(stmt, key.order_by);
@@ -296,11 +297,12 @@ where
                         Some(condition) => Condition::all().add(condition),
                         None => Condition::all(),
                     };
-                    let tuple = sea_orm::sea_query::Expr::tuple(key.columns.iter().map(
-                        |column: &T::Column| sea_orm::sea_query::Expr::col(*column).into(),
-                    ));
-                    let condition = condition
-                        .add(tuple.in_tuples(values.into_iter().map(ValueTuple::Many)));
+                    let tuple =
+                        sea_orm::sea_query::Expr::tuple(key.columns.iter().map(
+                            |column: &T::Column| sea_orm::sea_query::Expr::col(*column).into(),
+                        ));
+                    let condition =
+                        condition.add(tuple.in_tuples(values.into_iter().map(ValueTuple::Many)));
                     let stmt = stmt.filter(condition);
 
                     let stmt = apply_order(stmt, key.order_by);
